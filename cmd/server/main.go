@@ -4,14 +4,18 @@ import (
 	"log"
 	"net/http"
 
-	"dev.theenthusiast.career-craft/internal/api"
+	"dev.theenthusiast.career-craft/internal/database"
+	"dev.theenthusiast.career-craft/internal/server"
 )
 
 func main() {
-	router := api.SetupRoutes()
-
-	log.Println("Starting server on :8080")
-	if err := http.ListenAndServe(":8080", router); err != nil {
-		log.Fatalf("Error starting server: %v", err)
+	db, err := database.InitDB()
+	if err != nil {
+		log.Fatalf("Error initializing database: %v", err)
 	}
+	defer db.Close()
+
+	s := server.NewServer(db)
+	log.Println("Server starting on :8080")
+	log.Fatal(http.ListenAndServe(":8080", s.Router))
 }
