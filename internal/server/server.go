@@ -25,9 +25,12 @@ func NewServer(db *sqlx.DB) *Server {
 
 func (s *Server) routes() {
 	jh := handlers.NewJobHandler(s.DB)
+	ch := handlers.NewCompanyHandler(s.DB)
+
 	s.Router.GET("/jobs/:company", jh.GetJobsByCompany)
 	s.Router.POST("/jobs", jh.CreateJob)
 	s.Router.POST("/jobs/bulk", jh.BulkCreateJobs)
+	s.Router.GET("/company/:company", ch.GetCompanyDetails)
 }
 
 // CORSMiddleware wraps the router with CORS functionality
@@ -38,7 +41,6 @@ func (s *Server) CORSMiddleware() http.Handler {
 		AllowedHeaders: []string{"*"},
 		Debug:          true, // Enable debugging for testing, disable in production
 	})
-
 	return c.Handler(s.Router)
 }
 
