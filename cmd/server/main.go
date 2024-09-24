@@ -15,6 +15,7 @@ func main() {
 	defer db.Close()
 
 	s := server.NewServer(db)
-	log.Println("Server starting on :8080")
-	log.Fatal(s.Run(":8080"))
+
+	log.Println("Server starting on :8081")
+	log.Fatal(s.Run(":8081"))
 }
