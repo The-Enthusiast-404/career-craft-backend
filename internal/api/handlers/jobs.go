@@ -1,5 +1,3 @@
-// jobs.go
-
 package handlers
 
 import (
@@ -42,10 +40,14 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request, _ httprou
 		return
 	}
 
-	query := `INSERT INTO jobs (title, company, url)
-              VALUES ($1, $2, $3) RETURNING id`
+	query := `
+		INSERT INTO jobs (title, company, location, salary, role, skills, remote, experience, education, department, job_type, url, description)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		RETURNING id`
 
-	err = h.DB.QueryRowx(query, job.Title, job.Company, job.URL).Scan(&job.ID)
+	err = h.DB.QueryRowx(query,
+		job.Title, job.Company, job.Location, job.Salary, job.Role, job.Skills, job.Remote,
+		job.Experience, job.Education, job.Department, job.JobType, job.URL, job.Description).Scan(&job.ID)
 	if err != nil {
 		http.Error(w, "Failed to create job", http.StatusInternalServerError)
 		return
@@ -64,8 +66,6 @@ func (h *JobHandler) BulkCreateJobs(w http.ResponseWriter, r *http.Request, _ ht
 		return
 	}
 
-	fmt.Printf("Received %d jobs for bulk creation\n", len(jobs))
-
 	tx, err := h.DB.Beginx()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to start transaction: %v", err), http.StatusInternalServerError)
@@ -74,10 +74,20 @@ func (h *JobHandler) BulkCreateJobs(w http.ResponseWriter, r *http.Request, _ ht
 	defer tx.Rollback()
 
 	stmt, err := tx.Preparex(`
-		INSERT INTO jobs (title, company, url)
-		VALUES ($1, $2, $3)
+		INSERT INTO jobs (title, company, location, salary, role, skills, remote, experience, education, department, job_type, url, description)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		ON CONFLICT (company, title) DO UPDATE SET
-		url = EXCLUDED.url
+		location = EXCLUDED.location,
+		salary = EXCLUDED.salary,
+		role = EXCLUDED.role,
+		skills = EXCLUDED.skills,
+		remote = EXCLUDED.remote,
+		experience = EXCLUDED.experience,
+		education = EXCLUDED.education,
+		department = EXCLUDED.department,
+		job_type = EXCLUDED.job_type,
+		url = EXCLUDED.url,
+		description = EXCLUDED.description
 	`)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to prepare statement: %v", err), http.StatusInternalServerError)
@@ -87,21 +97,18 @@ func (h *JobHandler) BulkCreateJobs(w http.ResponseWriter, r *http.Request, _ ht
 
 	inserted := 0
 	updated := 0
-	for i, job := range jobs {
-		if job.Title == "" || job.Company == "" {
-			fmt.Printf("Skipping job %d due to missing required fields: %+v\n", i, job)
-			continue
-		}
-
-		result, err := stmt.Exec(job.Title, job.Company, job.URL)
+	for _, job := range jobs {
+		result, err := stmt.Exec(
+			job.Title, job.Company, job.Location, job.Salary, job.Role, job.Skills, job.Remote,
+			job.Experience, job.Education, job.Department, job.JobType, job.URL, job.Description)
 		if err != nil {
-			fmt.Printf("Error inserting/updating job %d: %v\nJob details: %+v\n", i, err, job)
+			fmt.Printf("Error inserting/updating job %s: %v\n", job.Title, err)
 			continue
 		}
 
 		rowsAffected, err := result.RowsAffected()
 		if err != nil {
-			fmt.Printf("Error getting rows affected for job %d: %v\n", i, err)
+			fmt.Printf("Error getting rows affected for job %s: %v\n", job.Title, err)
 			continue
 		}
 
@@ -117,8 +124,6 @@ func (h *JobHandler) BulkCreateJobs(w http.ResponseWriter, r *http.Request, _ ht
 		http.Error(w, fmt.Sprintf("Failed to commit transaction: %v", err), http.StatusInternalServerError)
 		return
 	}
-
-	fmt.Printf("Bulk job creation completed. Inserted: %d, Updated: %d\n", inserted, updated)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

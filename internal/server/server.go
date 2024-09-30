@@ -34,7 +34,7 @@ func (s *Server) routes() {
 	// Protected routes
 	s.Router.GET("/jobs/:company", s.wrapWithAuth(jh.GetJobsByCompany))
 	s.Router.POST("/jobs", s.wrapWithAuth(jh.CreateJob))
-	s.Router.POST("/jobs/bulk", s.wrapWithAuth(jh.BulkCreateJobs))
+	s.Router.POST("/jobs/bulk", jh.BulkCreateJobs)
 	s.Router.GET("/company/:company", s.wrapWithAuth(ch.GetCompanyDetails))
 }
 

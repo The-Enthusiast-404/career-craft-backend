@@ -1,4 +1,4 @@
--- create_jobs_table.down.sql
+-- 000001_create_jobs_table.down.sql
 
-DROP INDEX IF EXISTS idx_company;
 DROP TABLE IF EXISTS jobs;
+DROP INDEX IF EXISTS idx_company;
